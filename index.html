@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jennilyn</title>
+<style>
+  body {
+    font-family: 'Comic Sans MS', sans-serif;
+    background: #fdf6f0;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  h1 {
+    color: #4a90e2;
+    margin: 20px;
+  }
+#score {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0;
+  color: #333;
+  position: absolute;
+  top: 100px;
+  right: 20px;
+  width: 46%;
+  z-index: 10;
+}
+
+#wordBank {
+  width: 45%;
+  height: 70vh;
+  position: absolute;
+  left: 20px;
+  top: 100px;
+  border: 3px dashed #a3d2ca;
+  border-radius: 15px;
+  background: #eaf6f6;
+  overflow: hidden;
+}
+
+
+ .word {
+  position: absolute;
+  padding: 15px 25px;
+  background: #f7d9d9;
+  border-radius: 10px;
+  cursor: grab;
+  user-select: none;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  font-size: 28px;
+  font-weight: bold;
+}
+
+#sentenceArea {
+  width: 46%;
+  height: 45vh;
+  position: absolute;
+  top: 160px;
+  right: 20px;
+  border: 3px solid #f6b8b8;
+  border-radius: 15px;
+  background: #fff3e6;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+
+
+  .buttonBar {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 43%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+
+  button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 10px;
+    background: #a3d2ca;
+    color: #333;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #5eaaa8;
+    color: #fff;
+  }
+  @media (max-width: 768px) {
+  #wordBank, #sentenceArea {
+    width: 95%;
+  }
+
+  .word {
+    font-size: 28px;
+  }
+}
+
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -20px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: confettiFall 2s linear forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+</style>
+</head>
+<body>
+<h1>Find the verb and action word</h1>
+<div id="score"></div>
+<div id="wordBank"></div>
+<div id="sentenceArea"></div>
+<div class="buttonBar">
+  <button onclick="checkSentence()">Check</button>
+  <button onclick="previousQuestion()">Previous Question</button>
+  <button onclick="nextQuestion()">Next Question</button>
+<button id="musicButton" type="button" onclick="playMusic()">🔊 Music</button>
+
+</div>
+
+<script>
+const questions = [
+  {
+    question: "1. Which word is an action word?",
+    words: ["Chair", "Run", "Sky", "Pencil"],
+    answer: "Run"
+  },
+  {
+    question: "2. Which is the verb in this group?",
+    words: ["Eat", "Rice", "Table", "Book"],
+    answer: "Eat"
+  },
+  {
+    question: "3. Choose the action word.",
+    words: ["Teacher", "Jump", "Bag", "Window"],
+    answer: "Jump"
+  },
+  {
+    question: "4. Which word shows an action?",
+    words: ["Sleep", "Bed", "Blanket", "Pillow"],
+    answer: "Sleep"
+  },
+  {
+    question: "5. Which is the verb?",
+    words: ["Play", "Ball", "Game", "Toy"],
+    answer: "Play"
+  },
+  {
+    question: "6. Which word is an action word?",
+    words: ["Dog", "Cat", "Walk", "Bird"],
+    answer: "Walk"
+  },
+  {
+    question: "7. Which is the verb?",
+    words: ["Write", "Paper", "Pen", "Notebook"],
+    answer: "Write"
+  },
+  {
+    question: "8. Which word shows an action?",
+    words: ["Sing", "Song", "Music", "Radio"],
+    answer: "Sing"
+  },
+  {
+    question: "9. Which is the action word?",
+    words: ["Cook", "Rice", "Plate", "Spoon"],
+    answer: "Cook"
+  },
+  {
+    question: "10. Which word is the verb?",
+    words: ["Read", "Book", "Library", "Story"],
+    answer: "Read"
+  }
+];
+
+let currentQuestion = 0;
+let score = 0;
+let words = [];
+let velocities = [];
+let animationFrameId = null;
+let hasChecked = false;
+
+const MOVEMENT_SPEED = 3;
+
+function initGame() {
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+  const wordBank = document.getElementById("wordBank");
+  wordBank.innerHTML = "";
+  document.getElementById("sentenceArea").innerHTML = "";
+
+  const current = questions[currentQuestion];
+  document.getElementById("score").textContent = current.question;
+  words = current.words;
+  velocities = [];
+
+  words.forEach((word, i) => {
+
+    const span = document.createElement("div");
+    span.className = "word";
+    span.textContent = word;
+let placed = false;
+let attempts = 0;
+
+while (!placed && attempts < 100) {
+  const testTop = Math.random() * Math.max(0, wordBank.clientHeight - 70);
+  const testLeft = Math.random() * Math.max(0, wordBank.clientWidth - 180);
+
+  const existingWords = document.querySelectorAll("#wordBank .word");
+  let overlapping = false;
+
+  existingWords.forEach(existing => {
+    const existingTop = parseFloat(existing.style.top) || 0;
+    const existingLeft = parseFloat(existing.style.left) || 0;
+
+    if (
+      testLeft < existingLeft + existing.offsetWidth + 10 &&
+      testLeft + 180 > existingLeft - 10 &&
+      testTop < existingTop + existing.offsetHeight + 10 &&
+      testTop + 70 > existingTop - 10
+    ) {
+      overlapping = true;
+    }
+  });
+
+  if (!overlapping) {
+    span.style.top = testTop + "px";
+    span.style.left = testLeft + "px";
+    placed = true;
+  }
+
+  attempts++;
+}
+
+if (!placed) {
+  span.style.top = Math.random() * 100 + "px";
+  span.style.left = Math.random() * 100 + "px";
+}
+
+
+
+    wordBank.appendChild(span);
+
+    // random velocity
+    velocities.push({
+dx: MOVEMENT_SPEED * (Math.random() < 0.5 ? -1 : 1),
+dy: MOVEMENT_SPEED * (Math.random() < 0.5 ? -1 : 1),
+
+      moving: true
+    });
+
+    // drag events
+    span.draggable = true;
+    span.addEventListener("dragstart", dragStart);
+  });
+
+  animateWords();
+}
+function animateWords() {
+  const wordBank = document.getElementById("wordBank");
+  const spans = document.querySelectorAll("#wordBank .word");
+
+  spans.forEach((span, i) => {
+    if (!velocities[i] || !velocities[i].moving) return;
+
+    let top = parseFloat(span.style.top) || 0;
+    let left = parseFloat(span.style.left) || 0;
+
+    top += velocities[i].dy;
+    left += velocities[i].dx;
+
+    const maxTop = wordBank.clientHeight - span.offsetHeight;
+    const maxLeft = wordBank.clientWidth - span.offsetWidth;
+
+    if (top <= 0) {
+      top = 0;
+      velocities[i].dy = Math.abs(velocities[i].dy);
+    }
+
+    if (top >= maxTop) {
+      top = maxTop;
+      velocities[i].dy = -Math.abs(velocities[i].dy);
+    }
+
+    if (left <= 0) {
+      left = 0;
+      velocities[i].dx = Math.abs(velocities[i].dx);
+    }
+
+    if (left >= maxLeft) {
+      left = maxLeft;
+      velocities[i].dx = -Math.abs(velocities[i].dx);
+    }
+
+    span.style.top = top + "px";
+    span.style.left = left + "px";
+  });
+
+  // Check collisions between moving words
+  for (let i = 0; i < spans.length; i++) {
+    if (!velocities[i] || !velocities[i].moving) continue;
+
+    for (let j = i + 1; j < spans.length; j++) {
+      if (!velocities[j] || !velocities[j].moving) continue;
+
+      const word1 = spans[i];
+      const word2 = spans[j];
+
+      const rect1 = word1.getBoundingClientRect();
+      const rect2 = word2.getBoundingClientRect();
+
+      const collision =
+        rect1.left < rect2.right &&
+        rect1.right > rect2.left &&
+        rect1.top < rect2.bottom &&
+        rect1.bottom > rect2.top;
+
+      if (collision) {
+        // Push the words apart
+        const center1X = rect1.left + rect1.width / 2;
+        const center1Y = rect1.top + rect1.height / 2;
+
+        const center2X = rect2.left + rect2.width / 2;
+        const center2Y = rect2.top + rect2.height / 2;
+
+        const differenceX = center1X - center2X;
+        const differenceY = center1Y - center2Y;
+
+        if (Math.abs(differenceX) > Math.abs(differenceY)) {
+          // Horizontal collision
+          velocities[i].dx *= -1;
+          velocities[j].dx *= -1;
+
+          const push = differenceX >= 0 ? 3 : -3;
+
+          let left1 = parseFloat(word1.style.left) || 0;
+          let left2 = parseFloat(word2.style.left) || 0;
+
+          left1 += push;
+          left2 -= push;
+
+          word1.style.left = left1 + "px";
+          word2.style.left = left2 + "px";
+
+        } else {
+          // Vertical collision
+          velocities[i].dy *= -1;
+          velocities[j].dy *= -1;
+
+          const push = differenceY >= 0 ? 3 : -3;
+
+          let top1 = parseFloat(word1.style.top) || 0;
+          let top2 = parseFloat(word2.style.top) || 0;
+
+          top1 += push;
+          top2 -= push;
+
+          word1.style.top = top1 + "px";
+          word2.style.top = top2 + "px";
+        }
+      }
+    }
+  }
+
+  animationFrameId = requestAnimationFrame(animateWords);
+
+
+}
+
+function dragStart(e) {
+  e.dataTransfer.setData("text", e.target.textContent);
+  e.dataTransfer.setData("index", Array.from(e.target.parentNode.children).indexOf(e.target));
+}
+
+document.getElementById("sentenceArea").addEventListener("dragover", e => {
+  e.preventDefault();
+});
+
+document.getElementById("sentenceArea").addEventListener("drop", e => {
+  e.preventDefault();
+  const word = e.dataTransfer.getData("text");
+  const index = e.dataTransfer.getData("index");
+  const span = document.createElement("div");
+  span.className = "word";
+  span.textContent = word;
+  document.getElementById("sentenceArea").appendChild(span);
+  velocities[index].moving = false;
+  document.querySelectorAll("#wordBank .word")[index].remove();
+});
+
+function createConfetti() {
+  const colors = [
+    "#ff595e",
+    "#ffca3a",
+    "#8ac926",
+    "#1982c4",
+    "#6a4c93",
+    "#ff69b4",
+    "#ff8c42",
+    "#00c2a8"
+  ];
+
+  for (let i = 0; i < 200; i++) {
+    const confetti = document.createElement("div");
+
+    confetti.className = "confetti";
+
+    confetti.style.left = Math.random() * 100 + "vw";
+    confetti.style.backgroundColor =
+      colors[Math.floor(Math.random() * colors.length)];
+
+    confetti.style.animationDelay = Math.random() * 0.8 + "s";
+
+    confetti.style.width = (Math.random() * 8 + 6) + "px";
+    confetti.style.height = (Math.random() * 8 + 6) + "px";
+
+    document.body.appendChild(confetti);
+
+    setTimeout(() => {
+      confetti.remove();
+    }, 3000);
+  }
+}
+
+function checkSentence() {
+  if (hasChecked) {
+    return;
+  }
+  hasChecked = true;
+  const answerBox = document.getElementById("sentenceArea");
+  answerBox.innerHTML = "";
+  const answer = document.createElement("div");
+  answer.textContent = questions[currentQuestion].answer;
+  answer.style.fontSize = "80px";
+  answer.style.fontWeight = "bold";
+  answer.style.color = "#333";
+  answer.style.background = "transparent";
+  answer.style.boxShadow = "none";
+  answer.style.padding = "10px";
+
+  answerBox.appendChild(answer);
+
+  createConfetti();
+}
+
+function previousQuestion() {
+  if (currentQuestion > 0) {
+    currentQuestion--;
+    hasChecked = false;
+    initGame();
+  }
+}
+
+
+
+function nextQuestion() {
+  if (currentQuestion < questions.length - 1) {
+    currentQuestion++; 
+    hasChecked = false;
+    initGame();
+  }
+}
+
+initGame();
+const backgroundMusic = new Audio("background.mp3");
+const musicButton = document.getElementById("musicButton");
+
+backgroundMusic.volume = 0.3;
+backgroundMusic.loop = true;
+
+function playMusic() {
+  if (backgroundMusic.paused) {
+    backgroundMusic.play();
+    musicButton.textContent = "🔇Music";
+  } else {
+    backgroundMusic.pause();
+    musicButton.textContent = "🔊Music";
+  }
+}
+
+</script>
+<audio id="backgroundMusic" src="background.mp3" preload="auto" loop></audio>
+
+</body>
+</html>
+
+
+
